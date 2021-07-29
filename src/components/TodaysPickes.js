@@ -30,7 +30,7 @@ export default function TodaysPickes() {
     }
     useEffect(() => {
         if(state.length !== 0){
-            setTodaysRecipes([state[15], state[18], state[26], state[38]])
+            setTodaysRecipes([state[16], state[19], state[26], state[38]])
         }
     }, [loading])
 
