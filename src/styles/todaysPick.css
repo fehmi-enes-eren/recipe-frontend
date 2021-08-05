@@ -92,7 +92,7 @@
 } */
 .sideListFig img{
       display: block;
-      width: 100%;
+      width: 140px;
       height: 100%;
       object-fit: cover;
       transition: all .3s; 
