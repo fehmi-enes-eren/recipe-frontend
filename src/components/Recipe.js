@@ -5,8 +5,10 @@ import RecipeService from "../services/recipe.service"
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import Favorite from '@material-ui/icons/Favorite';
+import Button from '@material-ui/core/Button';
 import FavoriteBorder from '@material-ui/icons/FavoriteBorder';
 import {API_BASE} from "../services/constants"
+import AuthService from "../services/auth.service";
 
 let initialState={ recipe:[], similarCategories: [], theSamePublisher: [] }
 
@@ -22,10 +24,12 @@ const reducer = (state, action) => {
 
 export default function Recipe(props) {
 
+    const [saveState, setSaveState] = useState(false);
     const [votedRecipe, setVotedRecipe] = useState(false)
     const [totalVotes, setTotalVotes] = useState(0);
     const [votersArray, setVotersArray] = useState([])
     const [showPublisherName, setShowPublisherName] = useState("")
+    const [currentUser, setCurrentUser] = useState("");
     //const [uploadingSimilarCategories, setUploadingSimilar] = useState("aaa")
     const [aaa, setAAA] = useState("")
     
@@ -44,7 +48,7 @@ export default function Recipe(props) {
         })
         .catch(err=>console.log(err))
         
-      }, []);
+      }, [saveState]);
 
       useEffect(() => {
           if(state.recipe.length !== 0){
@@ -58,12 +62,16 @@ export default function Recipe(props) {
             if(state.recipe[0].votes){
                 setTotalVotes(state.recipe[0].votes)
             }
+
+            const currentUserId = AuthService.getCurrentUser()
+            if(currentUserId)setCurrentUser(currentUserId.id)
             // console.log(state.recipe[0])
             // console.log(props.currentUser)
             //console.log(state.recipe[0].voters.includes(props.currentUser.id))
           }
           
       }, [state.recipe])
+
 
       const findSimilarRecipes = () => {
           const firstCategory = state.recipe[0].category.split(",")
@@ -103,9 +111,6 @@ export default function Recipe(props) {
         //console.log(e.target.id)
         setVotedRecipe(!votedRecipe)
         // console.log(state.recipe)
-        // console.log(state.recipe.filter(item=>{
-        //     return item._id === e.target.id ? item.voters = [...item.voters, props.currentUser.id] : item
-        //   }))
     
         if(e.target.checked){
           setTotalVotes(totalVotes+1);
@@ -120,14 +125,6 @@ export default function Recipe(props) {
             return item._id === e.target.id ? item.voters = [...item.voters, props.currentUser.id] : item
           })})
           //console.log(state.recipe)
-            
-
-        //   setContent(content.filter(item=>{
-        //     return item._id === e.target.id ? item.votes = totalVotes +1 : item
-        //   }))
-        //   setContent(content.filter(item=>{
-        //     return item._id === e.target.id ? item.voters = [...item.voters, props.currentUser.id] : item
-        //   }))
         
           setAAA("bbb")
         } else {
@@ -144,15 +141,6 @@ export default function Recipe(props) {
             }) : item
           })})
           //console.log(state.recipe)
-
-        //   setContent(content.filter(item=>{
-        //     return item._id === e.target.id ? item.votes = totalVotes -1 : item
-        //   }))
-        //   setContent(content.filter(item=>{
-        //     return item._id === e.target.id ? item.voters = item.voters.filter(element=>{
-        //       return element === props.currentUser.id ? "" : element
-        //     }) : item
-        //   }))
           
           setAAA("ccc")
         }
@@ -194,6 +182,53 @@ export default function Recipe(props) {
             //setUploadingSimilar("ccc");   
         })
         .catch(err=>console.log(err))
+      }
+
+
+      const saveForLaterFunc = (e) => {
+        if(currentUser){
+          RecipeService.findOneRecipe(e.target.id)
+            .then(res=>{
+                //console.log(res.data);
+                if(res.data.peopleWhoSaved.includes(currentUser)){
+                  
+                    let array = res.data.peopleWhoSaved
+    
+                    const index = array.indexOf(currentUser);
+                    if (index > -1) {
+                        array.splice(index, 1);
+                    }
+    
+                    RecipeService.saveForLaterRecipe(e.target.id, {peopleWhoSaved: array})
+                        .then(res=>{
+                        console.log(res.data);
+                        setSaveState(!saveState)
+                        // setSaveState(saveState.filter(item=>{
+                          
+                        //   return item._id === e.target.id ? item.peopleWhoSaved = item.peopleWhoSaved.filter(peopleIDs=>{
+                        //       return peopleIDs === currentUser ? "" : peopleIDs
+                        //     }) : item
+                        //   }))
+                        
+                        })
+                        .catch(err=>{console.log(err)})
+    
+                } else {
+                    RecipeService.saveForLaterRecipe(e.target.id, {peopleWhoSaved: [...res.data.peopleWhoSaved, currentUser]})
+                        .then(res=>{
+                        console.log(res.data);
+                        setSaveState(!saveState)
+                        // setSaveState(saveState.filter(item=>{
+                        //   return item._id === e.target.id ? item.peopleWhoSaved = [...item.peopleWhoSaved, currentUser] : item
+                        // }))
+                        })
+                        .catch(err=>{console.log(err)})
+                }
+                
+            })
+            .catch(err=>{console.log(err)})
+        }   
+        
       }
     return (
         <>
@@ -264,7 +299,16 @@ export default function Recipe(props) {
                                 </svg>
                                 {recipe.publisher}
                             </button> */}
+
+                            <Button size="large" color="primary" id={recipe._id} onClick={saveForLaterFunc} style={{margin:"0 22px 22px 0"}}>
+                                {/* <i className="far fa-bookmark" style={{fontSize:"18px"}}></i> */}
+                                {recipe.peopleWhoSaved.includes(currentUser) ?
+                                  <i className="fas fa-bookmark" id={recipe._id} style={{fontSize:"34px"}}></i> :
+                                  <i className="far fa-bookmark" id={recipe._id} style={{fontSize:"34px"}}></i>
+                              }
+                            </Button>
                             <div style={{display:"flex", flexWrap:"wrap"}}>
+                              
 
                                 <button className="recipe__love" onClick={(e)=>{props.currentUser ? console.log("Voted") : e.target.parentElement.nextElementSibling.innerHTML = "Please, sign in!"}}>
                                 <FormControlLabel
